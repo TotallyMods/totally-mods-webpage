@@ -1,7 +1,5 @@
-export async function POST(request) {
-  const body = await request.json();
-
-  console.log("GitHub webhook received:", body);
-
-  return Response.json({ ok: true });
+export async function POST() {
+  return new Response('OK', {
+    status: 200,
+  });
 }
