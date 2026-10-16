@@ -29,6 +29,7 @@ function flatten(nodes,dir='') {
  }
 }
 flatten(Array.isArray(roots)?roots:roots.files||roots.result||[]);
+files.splice(0, files.length, ...files.filter(f => f.name.startsWith('src/')));
 const prefix=files.every(x=>x.name.startsWith('src/'))?'src/':'';
 const rels=files.map(x=>x.name.slice(prefix.length));
 for(const p of ['package.json','app/page.js','app/globals.css','app/layout.js','components/UserNav.js','lib/supabase.js']) if(!rels.includes(p))throw Error(`Missing essential source file: ${p}`);
