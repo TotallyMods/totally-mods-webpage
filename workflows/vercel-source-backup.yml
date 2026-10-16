@@ -1,0 +1,37 @@
+name: Back up Vercel source
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+permissions:
+  contents: write
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_BACKUP_TOKEN }}
+      PROJECT_ID: prj_2VMU4UcL0nkhfGWiOuMsKxeDjY30
+      TEAM_ID: team_GxbzdAPmI8ggJRgJfXYEmnBj
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check configuration
+        run: test -n "$VERCEL_TOKEN" || { echo '::error::Set repository secret VERCEL_BACKUP_TOKEN'; exit 1; }
+      - name: Download and verify source
+        run: node .github/scripts/backup-vercel.mjs
+      - name: Update backup branch
+        run: |
+          set -eu
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin vercel-source-backup || true
+          if git show-ref --verify --quiet refs/remotes/origin/vercel-source-backup; then
+            git checkout -B vercel-source-backup origin/vercel-source-backup
+          else
+            git checkout --orphan vercel-source-backup
+          fi
+          git rm -rf --ignore-unmatch . >/dev/null || true
+          cp -a "$RUNNER_TEMP/vercel-source/." .
+          git add -A
+          if git diff --cached --quiet; then echo 'No changes'; exit 0; fi
+          git commit -m '[skip ci] Mirror Vercel source'
+          git push origin HEAD:vercel-source-backup
