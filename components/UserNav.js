@@ -1,0 +1,9 @@
+'use client';
+import {useEffect,useState} from 'react';import {useRouter} from 'next/navigation';import {supabase} from '../lib/supabase';
+const OWNER_IDS=["4b197ce7-5cfd-402f-ab23-a2b6ea6d3dfa","959bed5f-5407-4bdb-b426-6faca08fc7b4"];
+function fallbackName(user){const m=user?.user_metadata||{};return m.full_name||m.name||m.user_name||m.preferred_username||user?.email||'Account'}
+export default function UserNav(){const[user,setUser]=useState(null),[profile,setProfile]=useState(null);const router=useRouter();
+useEffect(()=>{let live=true;async function load(){const{data}=await supabase.auth.getUser();const u=data?.user||null;if(!live)return;setUser(u);if(u){const{data:p}=await supabase.from('profiles').select('display_name,avatar_url').eq('id',u.id).maybeSingle();if(live)setProfile(p||null)}}load();const{data:sub}=supabase.auth.onAuthStateChange(async(_e,s)=>{const u=s?.user||null;setUser(u);if(u){const{data:p}=await supabase.from('profiles').select('display_name,avatar_url').eq('id',u.id).maybeSingle();setProfile(p||null)}else setProfile(null)});return()=>{live=false;sub.subscription.unsubscribe()}},[]);
+async function logout(){await supabase.auth.signOut();setUser(null);setProfile(null);router.replace('/');router.refresh()}
+if(!user)return <a className="btn" href="/login">Sign in</a>;const name=profile?.display_name||fallbackName(user);const avatar=profile?.avatar_url||(user.user_metadata||{}).avatar_url;const owner=OWNER_IDS.includes(user.id);
+return <div className="navRight"><a className="accountPill accountWithAvatar" href="/account">{avatar?<img src={avatar} alt="" className="tinyAvatar"/>:<span className="tinyAvatar avatarFallback">{name.slice(0,1).toUpperCase()}</span>}<span className={owner?'ownerGlow':''}>{name}</span></a><button className="btn secondary" onClick={logout}>Log out</button></div>}
